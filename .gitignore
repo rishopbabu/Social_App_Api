@@ -6,3 +6,5 @@ profile_pictures
 venv
 .env
 index.html
+SocialAppDB
+alembic.ini
