@@ -26,3 +26,19 @@ class Users(Base):
     updated_by = Column(TIMESTAMP(timezone=True),
                         nullable=False,
                         server_default=text("now()"))
+
+class Post(Base):
+    __tablename__ = "Post"
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    caption = Column(String, nullable=False, default=None)
+    post_image = Column(String, default=None)
+    is_published = Column(Boolean, server_default="TRUE", nullable=False)
+    created_at = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+    user_detail = relationship("Users")

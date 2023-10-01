@@ -150,3 +150,13 @@ class UpdateProfileResponse(BaseModel):
     
     class Config:
         from_attributes = True
+        
+class PostBase(BaseModel):
+    caption: str
+    is_published: bool = True
+
+class CreatePost(PostBase):
+    pass
+
+    class Config:
+        from_attributes = True

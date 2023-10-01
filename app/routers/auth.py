@@ -11,15 +11,15 @@ from .. import models, schemas, utils, oauth2, databases
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-router.mount("/profile_pictures",
-             StaticFiles(directory="profile_pictures"),
-             name="profile_pictures")
-
 # Specify the directory path
 profile_pictures_directory = "profile_pictures"
 
 if not os.path.exists(profile_pictures_directory):
     os.makedirs(profile_pictures_directory)
+
+router.mount("/profile_pictures",
+             StaticFiles(directory="profile_pictures"),
+             name="profile_pictures")
 
 
 # Create a new user
