@@ -12,6 +12,7 @@ SECRET_KEY = settings.secret_key
 ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
+
 def create_access_token(data: dict):
     to_encode = data.copy()
 
@@ -23,6 +24,7 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
     return encoded_jwt
+
 
 def verify_access_token(token: str, credentials_exceptions):
     try:
@@ -40,9 +42,9 @@ def verify_access_token(token: str, credentials_exceptions):
 
     return token_data
 
-def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(databases.get_db)
-):
+
+def get_current_user(token: str = Depends(oauth2_scheme),
+                     db: Session = Depends(databases.get_db)):
     credentials_exceptions = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=f"Could not validate credentials",
@@ -51,6 +53,7 @@ def get_current_user(
 
     token = verify_access_token(token, credentials_exceptions)
 
-    user_data = db.query(models.Users).filter(models.Users.id == token.id).first() 
+    user_data = db.query(
+        models.Users).filter(models.Users.id == token.id).first()
 
     return user_data

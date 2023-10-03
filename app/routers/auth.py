@@ -94,7 +94,7 @@ async def login_user(user_credentials: OAuth2PasswordRequestForm = Depends(),
 
     user = db.query(models.Users).filter(
         models.Users.email == user_credentials.username).first()
-
+    print("user:", user.id, user.profile_pic, user.email, user.phone)
     if not user:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Invalid username or password")
@@ -102,11 +102,13 @@ async def login_user(user_credentials: OAuth2PasswordRequestForm = Depends(),
     if not utils.verify_password(user_credentials.password, user.password):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Invalid username or password")
+    print("1")
     try:
+        print("2")
         user_detail = schemas.UserLogin.from_db(user)
-
+        print("3")
         access_token = oauth2.create_access_token(data={"user_id": user.id})
-
+        print("4")
         response_model = schemas.UserLoginResponse(message="Login Successful",
                                                    access_token=access_token,
                                                    token_type="Bearer",

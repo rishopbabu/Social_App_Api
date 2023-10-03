@@ -31,6 +31,5 @@ def root():
     return response_model
 
 
-
 app.include_router(auth.router)
 app.include_router(posts.router)

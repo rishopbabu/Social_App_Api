@@ -14,9 +14,7 @@ class Users(Base):
 
     __tablename__ = "users"
 
-    id = Column(Integer,
-                primary_key=True,
-                nullable=False)
+    id = Column(Integer, primary_key=True, nullable=False)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     phone = Column(String, nullable=False, unique=True)
@@ -27,18 +25,19 @@ class Users(Base):
                         nullable=False,
                         server_default=text("now()"))
 
+
 class Post(Base):
-    __tablename__ = "Post"
+    __tablename__ = "posts"
 
     id = Column(Integer, primary_key=True, nullable=False)
-    user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id = Column(Integer,
+                     ForeignKey("users.id", ondelete="CASCADE"),
+                     nullable=False)
     caption = Column(String, nullable=False, default=None)
     post_image = Column(String, default=None)
     is_published = Column(Boolean, server_default="TRUE", nullable=False)
-    created_at = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
-    )
+    updated_by = Column(TIMESTAMP(timezone=True),
+                        nullable=False,
+                        server_default=text("now()"))
 
     user_detail = relationship("Users")

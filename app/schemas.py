@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from .models import Users
 from typing import List, Optional
+from fastapi import Form
 
 
 class CommonMessageResponse(BaseModel):
@@ -10,7 +11,7 @@ class CommonMessageResponse(BaseModel):
 
 class TokenData(BaseModel):
     id: Optional[int] = None
-    
+
 
 class RegisterUser(BaseModel):
     first_name: str
@@ -18,7 +19,7 @@ class RegisterUser(BaseModel):
     phone: str
     email: EmailStr
     password: str
-    
+
     class Config:
         from_attributes = True
 
@@ -44,7 +45,7 @@ class UserDetail(BaseModel):
 
     class Config:
         from_attributes = True
-        
+
 
 class RegisterUserResponse(BaseModel):
     message: str
@@ -60,7 +61,7 @@ class UserLogin(BaseModel):
     last_name: str
     phone: str
     email: EmailStr
-    profile_pic: str = None
+    profile_pic: Optional[str] = None
     updated_by: datetime
 
     @classmethod
@@ -88,7 +89,7 @@ class UserListResponse(BaseModel):
     message: str
     total_users_count: int
     users_list: List[UserDetail]
-    
+
     class Config:
         from_attributes = True
 
@@ -96,31 +97,35 @@ class UserListResponse(BaseModel):
 class GetUsersByIDResponse(BaseModel):
     message: str
     user_detail: UserDetail
-    
+
     class Config:
         from_attributes = True
-    
+
+
 class UpdateUserDetail(BaseModel):
     first_name: str = None
     last_name: str = None
     email: EmailStr = None
     phone: str = None
-    
+
     class Config:
         from_attributes = True
+
 
 class UpdateUserDetailResponse(BaseModel):
     message: str
     user_detail: UserDetail
-    
+
     class Config:
         from_attributes = True
+
 
 class UpdatePassword(BaseModel):
     password: str
 
     class Config:
         from_attributes = True
+
 
 class UserDetailAfterProfileUpdate(BaseModel):
     id: int
@@ -130,7 +135,7 @@ class UserDetailAfterProfileUpdate(BaseModel):
     email: EmailStr
     profile_pic: str
     updated_by: datetime
-    
+
     @classmethod
     def from_users_model(cls, users: Users) -> 'UserDetail':
         return cls(id=users.id,
@@ -140,23 +145,51 @@ class UserDetailAfterProfileUpdate(BaseModel):
                    email=users.email,
                    profile_pic=users.profile_pic,
                    updated_by=users.updated_by)
-    
+
     class Config:
         from_attributes = True
-    
+
+
 class UpdateProfileResponse(BaseModel):
     message: str
     user_detail: UserDetailAfterProfileUpdate
-    
+
     class Config:
         from_attributes = True
-        
+
+
 class PostBase(BaseModel):
     caption: str
-    is_published: bool = True
+    is_published: bool
+
+    @classmethod
+    def as_form(cls, caption: str = Form(...), is_published: bool = True):
+        return cls(caption=caption, is_published=is_published)
+
 
 class CreatePost(PostBase):
     pass
+
+    class Config:
+        from_attributes = True
+
+
+class PostResponseBase(BaseModel):
+    id: int
+    user_id: int
+    caption: str
+    is_published: bool
+    post_image: str
+    updated_by: datetime
+    user_detail: UserDetail
+
+    class Config:
+        from_attributes = True
+
+
+class CreatePostResponse(BaseModel):
+    message: str
+    post_detail: PostResponseBase
 
     class Config:
         from_attributes = True
