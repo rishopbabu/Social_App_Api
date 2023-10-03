@@ -86,3 +86,85 @@ async def create_post(post: schemas.CreatePost = Depends(
         print(f'Internal Server Error: {str(e)}')
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=error_message)
+
+
+@router.get("/get_all_post",
+            name="Get All the posts",
+            status_code=status.HTTP_200_OK)
+async def get_all_posts(db: Session = Depends(get_db),
+                        current_user: int = Depends(oauth2.get_current_user)):
+
+    try:
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="You are not authorised to use this.")
+
+        posts = db.query(models.Post).all()
+
+        response_message = "All posts fetched successfully."
+
+        total_posts = len(posts)
+
+        post_response = [
+            schemas.PostResponseBase(id=posts.id,
+                                     user_id=posts.user_id,
+                                     caption=posts.caption,
+                                     is_published=posts.is_published,
+                                     post_image=posts.post_image,
+                                     updated_by=posts.updated_by,
+                                     user_detail=posts.user_detail)
+            for posts in posts
+        ]
+
+        response_model = schemas.GetPostsResponse(message=response_message,
+                                                  total_posts=total_posts,
+                                                  post_details=post_response)
+
+        return response_model
+
+    except Exception as e:
+        error_message = "Internal Server Error: An unexpected error occurred."
+        print(f'Internal Server Error: {str(e)}')
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=error_message)
+
+
+@router.get("/get_post/{id}",
+            name="Get post by ID",
+            status_code=status.HTTP_200_OK)
+async def get_user_by_id(id: int,
+                         db: Session = Depends(get_db),
+                         current_user: int = Depends(oauth2.get_current_user)):
+
+    try:
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="You are not authorised to use this.")
+
+        post = db.query(models.Post).filter(models.Post.id == id).first()
+
+        if not post:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f'Post with id: {id} not found.')
+
+        response_message = "Post fetched successfully."
+
+        post_response = schemas.PostResponseBase(
+            id=post.id,
+            user_id=post.user_id,
+            caption=post.caption,
+            is_published=post.is_published,
+            post_image=post.post_image,
+            updated_by=post.updated_by,
+            user_detail=post.user_detail)
+
+        response_model = schemas.GetIndividualPostResponse(
+            message=response_message, post_detail=post_response)
+
+        return response_model
+
+    except Exception as e:
+        error_message = "Internal Server Error: An unexpected error occurred."
+        print(f'Internal Server Error: {str(e)}')
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=error_message)

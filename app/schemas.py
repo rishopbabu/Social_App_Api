@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from .models import Users
+from .models import Users, Post
 from typing import List, Optional
 from fastapi import Form
 
@@ -182,6 +182,16 @@ class PostResponseBase(BaseModel):
     post_image: str
     updated_by: datetime
     user_detail: UserDetail
+    
+    @classmethod
+    def from_db(cls, posts: Post):
+        return cls(id = posts.id,
+                   user_id = posts.user_id,
+                   caption = posts.caption,
+                   is_published = posts.is_published,
+                   post_image = posts.post_image,
+                   updated_by = posts.updated_by,
+                   user_detail = posts.user_detail)
 
     class Config:
         from_attributes = True
@@ -191,5 +201,20 @@ class CreatePostResponse(BaseModel):
     message: str
     post_detail: PostResponseBase
 
+    class Config:
+        from_attributes = True
+
+class GetPostsResponse(BaseModel):
+    message: str
+    total_posts: int
+    post_details: List[PostResponseBase]
+    
+    class Config:
+        from_attributes = True
+        
+class GetIndividualPostResponse(BaseModel):
+    message: str
+    post_detail: PostResponseBase
+    
     class Config:
         from_attributes = True
