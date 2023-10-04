@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, conint
 from datetime import datetime
 from .models import Users, Post
 from typing import List, Optional
@@ -175,23 +175,33 @@ class CreatePost(PostBase):
 
 
 class PostResponseBase(BaseModel):
-    id: int
+    post_id: int
     user_id: int
     caption: str
     is_published: bool
     post_image: str
     updated_by: datetime
     user_detail: UserDetail
-    
+    votes: int
+
     @classmethod
     def from_db(cls, posts: Post):
-        return cls(id = posts.id,
-                   user_id = posts.user_id,
-                   caption = posts.caption,
-                   is_published = posts.is_published,
-                   post_image = posts.post_image,
-                   updated_by = posts.updated_by,
-                   user_detail = posts.user_detail)
+        return cls(post_id=posts.post_id,
+                   user_id=posts.user_id,
+                   caption=posts.caption,
+                   is_published=posts.is_published,
+                   post_image=posts.post_image,
+                   updated_by=posts.updated_by,
+                   user_detail=posts.user_detail,
+                   votes=0)
+
+    class Config:
+        from_attributes = True
+
+
+class postResponse(BaseModel):
+    post_detail: PostResponseBase
+    votes: int
 
     class Config:
         from_attributes = True
@@ -204,17 +214,32 @@ class CreatePostResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class GetPostsResponse(BaseModel):
     message: str
     total_posts: int
     post_details: List[PostResponseBase]
-    
+
     class Config:
         from_attributes = True
-        
+
+
 class GetIndividualPostResponse(BaseModel):
     message: str
     post_detail: PostResponseBase
-    
+
     class Config:
         from_attributes = True
+
+
+class Vote(BaseModel):
+    post_id: int
+    dir: conint(le=1)
+
+    class Config:
+        from_attributes = True
+
+
+class VoteResponse(BaseModel):
+    message: str
+    vote: Vote

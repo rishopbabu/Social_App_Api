@@ -28,37 +28,37 @@ router.mount("/profile_pictures",
              status_code=status.HTTP_201_CREATED)
 async def register(user: schemas.RegisterUser, db: Session = Depends(get_db)):
 
-    # Validate required fields
-    if not all([
-            user.first_name, user.last_name, user.phone, user.email,
-            user.password
-    ]):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="All fields are required.")
-
-    # Check if the user's email or phone already exists
-    existing_user_email = (db.query(
-        models.Users).filter(models.Users.email == user.email).first())
-    existing_user_phone = (db.query(
-        models.Users).filter(models.Users.phone == user.phone).first())
-
-    if existing_user_email and existing_user_phone:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=
-            f"User with email: {user.email} & phone: {user.phone} already exists.",
-        )
-    elif existing_user_email:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"User with email: {user.email} already exists.",
-        )
-    elif existing_user_phone:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"User with phone: {user.phone} already exists.",
-        )
     try:
+        # Validate required fields
+        if not all([
+                user.first_name, user.last_name, user.phone, user.email,
+                user.password
+        ]):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="All fields are required.")
+
+        # Check if the user's email or phone already exists
+        existing_user_email = (db.query(
+            models.Users).filter(models.Users.email == user.email).first())
+        existing_user_phone = (db.query(
+            models.Users).filter(models.Users.phone == user.phone).first())
+
+        if existing_user_email and existing_user_phone:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=
+                f"User with email: {user.email} & phone: {user.phone} already exists.",
+            )
+        elif existing_user_email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"User with email: {user.email} already exists.",
+            )
+        elif existing_user_phone:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"User with phone: {user.phone} already exists.",
+            )
 
         # Hash the password and store
         hashed_pwd = utils.hash_password(user.password)
@@ -80,6 +80,10 @@ async def register(user: schemas.RegisterUser, db: Session = Depends(get_db)):
 
         return response_model
 
+    # Re-raise the HTTP exception
+    except HTTPException as http_exception:
+        raise http_exception
+
     except Exception as e:
         error_message = "Internal Server Error: An unexpected error occurred."
         print(f'Internal Server Error: {str(e)}')
@@ -92,29 +96,32 @@ async def register(user: schemas.RegisterUser, db: Session = Depends(get_db)):
 async def login_user(user_credentials: OAuth2PasswordRequestForm = Depends(),
                      db: Session = Depends(databases.get_db)):
 
-    user = db.query(models.Users).filter(
-        models.Users.email == user_credentials.username).first()
-    print("user:", user.id, user.profile_pic, user.email, user.phone)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Invalid username or password")
-
-    if not utils.verify_password(user_credentials.password, user.password):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Invalid username or password")
-    print("1")
     try:
-        print("2")
+        user = db.query(models.Users).filter(
+            models.Users.email == user_credentials.username).first()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Invalid username or password")
+
+        if not utils.verify_password(user_credentials.password, user.password):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Invalid username or password")
+
         user_detail = schemas.UserLogin.from_db(user)
-        print("3")
+
         access_token = oauth2.create_access_token(data={"user_id": user.id})
-        print("4")
+
         response_model = schemas.UserLoginResponse(message="Login Successful",
                                                    access_token=access_token,
                                                    token_type="Bearer",
                                                    user_detail=user_detail)
 
         return response_model
+
+    # Re-raise the HTTP exception
+    except HTTPException as http_exception:
+        raise http_exception
 
     except Exception as e:
         error_message = "Internal Server Error: An unexpected error occurred."
@@ -132,31 +139,30 @@ async def get_all_users(
         limit: int = Query(0, description="Limit the number of records", le=0),
         db: Session = Depends(get_db),
         current_user: int = (Depends(oauth2.get_current_user))):
-
-    query = db.query(models.Users).options(
-        load_only(models.Users.id, models.Users.first_name,
-                  models.Users.last_name, models.Users.phone,
-                  models.Users.profile_pic, models.Users.email,
-                  models.Users.updated_by))
-
-    if not skip and not limit:
-        users = query.all()
-
-    elif skip:
-        users = query.offset(skip).all()
-
-    elif limit:
-        users = query.limit(limit).all()
-
-    else:
-        users = query.offset(skip).limit(limit).all()
-
-    if not current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorised to do get all users.")
-
     try:
+        query = db.query(models.Users).options(
+            load_only(models.Users.id, models.Users.first_name,
+                      models.Users.last_name, models.Users.phone,
+                      models.Users.profile_pic, models.Users.email,
+                      models.Users.updated_by))
+
+        if not skip and not limit:
+            users = query.all()
+
+        elif skip:
+            users = query.offset(skip).all()
+
+        elif limit:
+            users = query.limit(limit).all()
+
+        else:
+            users = query.offset(skip).limit(limit).all()
+
+        if not current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorised to do get all users.")
+
         response_message = "All users data Fetched Successfully."
 
         # Convert instances of Users to UserDetail
@@ -176,6 +182,10 @@ async def get_all_users(
                                         total_users_count=total_users_count,
                                         users_list=user_details)
 
+    # Re-raise the HTTP exception
+    except HTTPException as http_exception:
+        raise http_exception
+
     except Exception as e:
         error_message = "Internal Server Error: An unexpected error occurred."
         print(f'Internal Server Error: {str(e)}')
@@ -193,19 +203,18 @@ async def get_user_by_id(id: int,
 
     user = db.query(models.Users).filter(models.Users.id == id).first()
     print("users:", user)
-
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id: {id} does not exists",
-        )
-
-    if current_user.id != id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorised to do get all users.")
-
     try:
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User with id: {id} does not exists",
+            )
+
+        if not current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorised to do get all users.")
+
         response_message = "User data Fetched Successfully."
 
         user_detail = schemas.UserDetail.from_users_model(user)
@@ -214,6 +223,10 @@ async def get_user_by_id(id: int,
                                                       user_detail=user_detail)
 
         return response_model
+
+    # Re-raise the HTTP exception
+    except HTTPException as http_exception:
+        raise http_exception
 
     except Exception as e:
         error_message = "Internal Server Error: An unexpected error occurred."
@@ -234,52 +247,46 @@ async def update_user(id: int,
                       db: Session = Depends(get_db),
                       current_user: int = Depends(oauth2.get_current_user)):
 
-    if current_user.id != id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail='Access not granted to do this action')
-
-    user_query = db.query(models.Users).filter(models.Users.id == id)
-
-    user = user_query.first()
-
-    if user == None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f"user with {id} does not exists.")
-
-    existing_first_name = user.first_name
-    existing_last_name = user.last_name
-    existing_email = user.email
-    existing_phone = user.phone
-
-    if update_user.first_name:
-        existing_first_name = update_user.first_name
-
-    if update_user.last_name:
-        existing_last_name = update_user.last_name
-
-    if update_user.email:
-        existing_email = update_user.email
-
-    if update_user.phone:
-        existing_phone = update_user.phone
-
-    if existing_email == models.Users.email:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f'Already this email: {existing_email} exists.')
-
-    if existing_phone == models.Users.phone:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f'Already this email: {existing_phone} exists.')
-
-    user.first_name = existing_first_name
-    user.last_name = existing_last_name
-    user.email = existing_email
-    user.phone = existing_phone
-
     try:
-        user_query.update(update_user.model_dump(), synchronize_session=False)
+        if current_user.id != id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail='Access not granted to do this action')
+
+        existing_user_email = db.query(models.Users).filter(
+            models.Users.id != id,
+            models.Users.email == update_user.email).first()
+
+        existing_user_phone = db.query(models.Users).filter(
+            models.Users.id != id,
+            models.Users.phone == update_user.phone).first()
+
+        if existing_user_email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f'Email {update_user.email} already exists.')
+
+        if existing_user_phone:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f'Phone {update_user.phone} already exists.')
+
+        user = db.query(models.Users).filter(models.Users.id == id).first()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f'User with id: {id} does not exists.')
+
+        if update_user.first_name:
+            user.first_name = update_user.first_name
+
+        if update_user.last_name:
+            user.last_name = update_user.last_name
+
+        if update_user.email:
+            user.email = update_user.email
+
+        if update_user.phone:
+            user.phone = update_user.phone
 
         db.commit()
 
@@ -294,6 +301,10 @@ async def update_user(id: int,
             message=response_mesage, user_detail=updated_user_detail)
 
         return response_model
+
+    # Re-raise the HTTP exception
+    except HTTPException as http_exception:
+        raise http_exception
 
     except Exception as e:
         error_message = "Internal Server Error: An unexpected error occurred."
@@ -342,6 +353,10 @@ async def update_password(id: int,
 
         return response_model
 
+    # Re-raise the HTTP exception
+    except HTTPException as http_exception:
+        raise http_exception
+
     except Exception as e:
         error_message = "Internal Server Error: An unexpected error occurred."
         print(f'Internal Server Error: {str(e)}')
@@ -359,16 +374,17 @@ async def upload_profile_pic(id: int,
                              current_user: str = Depends(
                                  oauth2.get_current_user)):
 
-    user = db.query(models.Users).filter(models.Users.id == id).first()
-
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="User not found")
-
-    if user.id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Not authorized.")
     try:
+        user = db.query(models.Users).filter(models.Users.id == id).first()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="User not found")
+
+        if user.id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Not authorized.")
+
         allowed_formats = ["jpeg", "jpg", "png", "heic"]
         file_extension = profile_pic.filename.split(".")[-1].lower()
 
@@ -405,8 +421,9 @@ async def upload_profile_pic(id: int,
 
         return response_model
 
-    except HTTPException as e:
-        raise e
+    # Re-raise the HTTP exception
+    except HTTPException as http_exception:
+        raise http_exception
 
     except Exception as e:
         db.rollback()
@@ -443,6 +460,10 @@ async def get_profile_picture_url(id: int,
 
         return FileResponse(file_path, media_type="image/jpeg")
 
+    # Re-raise the HTTP exception
+    except HTTPException as http_exception:
+        raise http_exception
+
     except Exception as e:
         error_message = "Internal Server Error: An unexpected error occurred."
         print(f'Internal Server Error: {str(e)}')
@@ -469,6 +490,15 @@ async def delete_user(id: int,
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail=f'User with id: {id} does not exists.')
 
+        posts = db.query(models.Post).filter(models.Post.user_id == id).all()
+
+        for post in posts:
+            if post.post_image:
+                delete_file_in_path(post.post_image)
+
+        if user.profile_pic:
+            delete_file_in_path(user.profile_pic)
+
         user_query.delete(synchronize_session=False)
 
         db.commit()
@@ -477,8 +507,28 @@ async def delete_user(id: int,
 
         return schemas.CommonMessageResponse(message=response_message)
 
+    # Re-raise the HTTP exception
+    except HTTPException as http_exception:
+        raise http_exception
+
     except Exception as e:
         error_message = "Internal Server Error: An unexpected error occurred."
         print(f'Internal Server Error: {str(e)}')
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=error_message)
+
+
+def delete_file_in_path(file_path):
+    try:
+        # Check if the file exists
+        if os.path.exists(file_path):
+            print(f"Deleting file: {file_path}")
+            # Split the file path to get the directory and file name
+            directory, file_name = os.path.split(file_path)
+
+            # Delete the file without removing the directory
+            os.remove(os.path.join(directory, file_name))
+        else:
+            print(f"File not found: {file_path}")
+    except Exception as e:
+        print(f"Error deleting file: {str(e)}")
