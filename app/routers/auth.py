@@ -1,9 +1,12 @@
+import io
 from fastapi import HTTPException, APIRouter, status, Depends, Query, Body, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session, load_only
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
+from io import BytesIO
+from sqlalchemy import asc
 import os
 from pathlib import Path
 from ..databases import get_db
@@ -145,7 +148,9 @@ async def get_all_users(
                       models.Users.last_name, models.Users.phone,
                       models.Users.profile_pic, models.Users.email,
                       models.Users.updated_by))
-
+        
+        query = query.order_by(asc(models.Users.id))
+        
         if not skip and not limit:
             users = query.all()
 
@@ -166,15 +171,20 @@ async def get_all_users(
         response_message = "All users data Fetched Successfully."
 
         # Convert instances of Users to UserDetail
-        user_details = [
-            schemas.UserDetail(id=user.id,
-                               first_name=user.first_name,
-                               last_name=user.last_name,
-                               phone=user.phone,
-                               email=user.email,
-                               profile_pic=user.profile_pic,
-                               updated_by=user.updated_by) for user in users
-        ]
+        user_details = []
+        for user in users:
+            # Generate profile picture URL endpoint
+            profile_pic_url = f"/get_profile_pic/{user.id}"
+            user_detail = schemas.UserDetail(
+                id=user.id,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                phone=user.phone,
+                email=user.email,
+                profile_pic=profile_pic_url,  # Use the generated URL
+                updated_by=user.updated_by
+            )
+            user_details.append(user_detail)
 
         total_users_count = len(user_details)
 
@@ -191,6 +201,38 @@ async def get_all_users(
         print(f'Internal Server Error: {str(e)}')
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=error_message)
+
+
+# Endpoint to serve profile pictures
+@router.get("/get_profile_pic/{user_id}", name="Get Profile Picture")
+async def get_profile_pic(user_id: int, db: Session = Depends(get_db)):
+    try:
+        user = db.query(models.Users).filter(models.Users.id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found."
+            )
+
+        # In this example, profile_pic is assumed to contain the URL of the image
+        # You can load the image and return it as a response
+        image_url = user.profile_pic
+        # Assuming 'image_url' is a valid URL
+        image_data = Image.open(image_url)
+        img_byte_array = BytesIO()
+        image_data.save(img_byte_array, format="PNG")
+        img_byte_array.seek(0)
+
+        return StreamingResponse(io.BytesIO(img_byte_array.read()), media_type="image/png")
+
+
+    except Exception as e:
+        error_message = "Internal Server Error: An unexpected error occurred."
+        print(f'Internal Server Error: {str(e)}')
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=error_message
+        )
 
 
 # Get users by id
