@@ -45,18 +45,18 @@ async def register(user: schemas.RegisterUser, db: Session = Depends(get_db)):
 
         if existing_user_email and existing_user_phone:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=
                 f"User with email: {user.email} & phone: {user.phone} already exists.",
             )
         elif existing_user_email:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"User with email: {user.email} already exists.",
             )
         elif existing_user_phone:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"User with phone: {user.phone} already exists.",
             )
 
