@@ -140,12 +140,13 @@ class UserDetailAfterProfileUpdate(BaseModel):
 
     @classmethod
     def from_users_model(cls, users: Users) -> 'UserDetail':
+        profile_picture_base64 = encode_image_to_base64(users.profile_pic) if users.profile_pic else None
         return cls(id=users.id,
                    first_name=users.first_name,
                    last_name=users.last_name,
                    phone=users.phone,
                    email=users.email,
-                   profile_pic=users.profile_pic,
+                   profile_pic=profile_picture_base64,
                    updated_by=users.updated_by)
 
     class Config:
