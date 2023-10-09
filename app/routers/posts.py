@@ -1,3 +1,4 @@
+import base64
 import os
 from PIL import Image
 from pathlib import Path
@@ -106,6 +107,12 @@ async def create_post(post: schemas.CreatePost = Depends(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=error_message)
 
+# Function to encode an image to base64
+def encode_image_to_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read())
+    return encoded_image.decode("utf-8")
+
 
 # Get all the posts
 @router.get("/get_all_post",
@@ -136,11 +143,12 @@ async def get_all_posts(db: Session = Depends(get_db),
                 user_id=post.user_id,
                 caption=post.caption,
                 is_published=post.is_published,
-                post_image=post.post_image,
+                post_image=encode_image_to_base64(post.post_image),
                 updated_by=post.updated_by,
                 user_detail=schemas.UserDetail.from_users_model(
                     post.user_detail),
-                votes=votes if votes else 0)
+                votes=votes if votes else 0,
+                profile_picture_base64=encode_image_to_base64(post.user_detail.profile_pic))
             for (post, votes
                  ) in posts_with_votes  # Use 'votes' instead of 'posts' here
         ]

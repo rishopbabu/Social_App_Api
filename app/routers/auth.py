@@ -1,5 +1,6 @@
+import base64
 import io
-from fastapi import HTTPException, APIRouter, status, Depends, Query, Body, UploadFile, File
+from fastapi import HTTPException, APIRouter, status, Depends, Query, Body, UploadFile, File, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session, load_only
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
@@ -137,9 +138,8 @@ async def login_user(user_credentials: OAuth2PasswordRequestForm = Depends(),
 @router.get("/get_all_users",
             name="Get All the users",
             status_code=status.HTTP_200_OK)
-async def get_all_users(
-        skip: int = Query(0, description="Skip this many records", ge=0),
-        limit: int = Query(0, description="Limit the number of records", le=0),
+async def get_all_users(skip: int = Query(0, description="Skip this many records", ge=0),
+    limit: int = Query(0, description="Limit the number of records", le=0),
         db: Session = Depends(get_db),
         current_user: int = (Depends(oauth2.get_current_user))):
     try:
@@ -169,23 +169,35 @@ async def get_all_users(
                 detail="You are not authorised to do get all users.")
 
         response_message = "All users data Fetched Successfully."
-
+                
         user_details = []
         for user in users:
+           
+            profile_pic_path = f"profile_pictures/{user.id}.jpg"
+            
+            if os.path.isfile(profile_pic_path):
+                with open(profile_pic_path, "rb") as image_file:
+                    encoded_profile_pic = base64.b64encode(image_file.read()).decode("utf-8")
+            else:
+                # Set a default or placeholder image if no image is available
+                encoded_profile_pic = None
+            
             user_detail = schemas.UserDetail(id=user.id,
                                              first_name=user.first_name,
                                              last_name=user.last_name,
                                              phone=user.phone,
                                              email=user.email,
-                                             profile_pic=user.profile_pic,
+                                             profile_pic=encoded_profile_pic,
                                              updated_by=user.updated_by)
             user_details.append(user_detail)
-        print("user_details:", user_details)
+       
         total_users_count = len(user_details)
-
-        return schemas.UserListResponse(message=response_message,
-                                        total_users_count=total_users_count,
-                                        users_list=user_details)
+        
+        response_model = schemas.UserListResponse(message=response_message,
+                                                  total_users_count=total_users_count,
+                                                  users_list=user_details)
+        
+        return response_model        
 
     # Re-raise the HTTP exception
     except HTTPException as http_exception:
